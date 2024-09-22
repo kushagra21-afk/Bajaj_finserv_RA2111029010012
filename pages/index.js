@@ -7,12 +7,17 @@ export default function Home() {
   const [error, setError] = useState('');
   const [selectedOptions, setSelectedOptions] = useState([]);
 
+  const filterOptions = [
+    { label: "Alphabets", value: "Alphabets" },
+    { label: "Numbers", value: "Numbers" },
+    { label: "Highest lowercase alphabet", value: "Highest lowercase alphabet" },
+  ];
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setResponse(null);
 
-    // Validate JSON input
     let parsedData;
     try {
       parsedData = JSON.parse(jsonInput);
@@ -21,7 +26,6 @@ export default function Home() {
       return;
     }
 
-    // Prepare form data
     const formData = new FormData();
     parsedData.data.forEach(item => {
       formData.append('data[]', item);
@@ -31,7 +35,6 @@ export default function Home() {
       formData.append('file', fileInput);
     }
 
-    // Call the backend API
     const res = await fetch('/api/bfhl', {
       method: 'POST',
       body: formData,
@@ -42,12 +45,15 @@ export default function Home() {
     console.log(data);
   };
 
-  const handleSelectChange = (e) => {
-    const options = Array.from(e.target.selectedOptions).map(option => option.value);
-    setSelectedOptions(options);
+  const handleCheckboxChange = (e) => {
+    const { value, checked } = e.target;
+    if (checked) {
+      setSelectedOptions((prev) => [...prev, value]);
+    } else {
+      setSelectedOptions((prev) => prev.filter((option) => option !== value));
+    }
   };
 
-  // Normalize the key (e.g., "Highest lowercase alphabet" => "highest_lowercase_alphabet")
   const normalizeOptionKey = (option) => {
     return option.toLowerCase().replace(/ /g, '_');
   };
@@ -57,21 +63,31 @@ export default function Home() {
 
     return selectedOptions.map(option => {
       const normalizedKey = normalizeOptionKey(option);
+      const dataArray = response[normalizedKey];
+
       return (
-        <div key={normalizedKey} className="mb-2">
-          <strong>{option}:</strong>
-          <pre className="text-black">{JSON.stringify(response[normalizedKey], null, 2)}</pre>
+        <div key={normalizedKey} className="mb-4">
+          <strong className="text-lg font-semibold">{option}:</strong>
+          <ul className="list-disc list-inside pl-4 mt-2">
+            {Array.isArray(dataArray) && dataArray.length > 0 ? (
+              dataArray.map((item, index) => (
+                <li key={index} className="text-gray-800">{item}</li>
+              ))
+            ) : (
+              <li className="text-gray-600">No data available</li>
+            )}
+          </ul>
         </div>
       );
     });
   };
 
   return (
-    <div className="container mx-auto p-4 text-black bg-[#FFFBE6]">
-      <h1 className="text-2xl font-bold mb-4">Your Roll Number</h1>
-      <form onSubmit={handleSubmit}>
+    <div className="container mx-auto p-6 bg-gray-100 rounded-lg shadow-lg text-gray-800">
+      <h1 className="text-3xl font-bold text-center mb-6">Your Roll Number Application</h1>
+      <form onSubmit={handleSubmit} className="space-y-4">
         <textarea
-          className="w-full p-2 border border-gray-300 mb-4"
+          className="w-full p-4 border border-gray-400 rounded-lg focus:outline-none focus:border-blue-500"
           placeholder='Enter JSON (e.g., {"data": ["A", "C", "z"]})'
           value={jsonInput}
           onChange={(e) => setJsonInput(e.target.value)}
@@ -79,20 +95,37 @@ export default function Home() {
         <input
           type="file"
           onChange={(e) => setFileInput(e.target.files[0])}
-          className="mb-4"
+          className="mb-4 block w-full text-sm text-gray-500"
         />
-        <button type="submit" className="bg-blue-500 text-black p-2 rounded">Submit</button>
+        <button
+          type="submit"
+          className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-all"
+        >
+          Submit
+        </button>
       </form>
-      {error && <p className="text-red-500">{error}</p>}
+      {error && <p className="text-red-500 mt-4">{error}</p>}
       {response && (
         <>
-          <select multiple onChange={handleSelectChange} className="border p-2 my-4">
-            <option value="Alphabets">Alphabets</option>
-            <option value="Numbers">Numbers</option>
-            <option value="Highest lowercase alphabet">Highest lowercase alphabet</option>
-          </select>
+          <div className="my-6">
+            <h2 className="text-2xl font-semibold mb-4">Select Filters:</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              {filterOptions.map((option) => (
+                <label key={option.value} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    value={option.value}
+                    onChange={handleCheckboxChange}
+                    className="rounded text-blue-500 focus:ring-blue-400"
+                  />
+                  <span className="text-gray-700">{option.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
           <div>
-            <h2 className="text-lg font-bold">Filtered Response:</h2>
+            <h2 className="text-xl font-semibold mb-4">Filtered Response:</h2>
             {renderFilteredResponse()}
           </div>
         </>
